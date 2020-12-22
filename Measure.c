@@ -17,12 +17,20 @@
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
+#include <time.h>
+
 #endif
 
 #define SERVER_PORT 5060  //The port that the server listens
+#define SIZE 1024         //Size of the file.
   
 int main()
 {
+	int i=0;
+	double timeTable [5] = {0};
+	double avg=0;
+	
+	clock_t t;
 #if defined _WIN32
     // Windows requires initialization
     WSADATA wsa;
@@ -134,8 +142,33 @@ int main()
 	   // TODO: close the sockets
            return -1;
     	}
+
+    	t = clock();
+    	char buffer[SIZE];
+     	int bytesRecieved = recv(clientSocket, buffer, SIZE, 0);
+     	if(bytesRecieved == -1){
+    		printf("error has occurred.\n");
+    		return(0);
+     	}
+    	else if(bytesRecieved == 0){
+		printf("socket closed.\n");
+     	}
+     	else if (bytesRecieved < SIZE)
+     	{
+		printf("recieved only %d bytes from the required %d.\n", bytesRecieved, SIZE);
+     	}
+     	else 
+     	{
+		printf("message was successfully recieved. size = %d.\n", bytesRecieved);
+     	}
+    
+     	t=clock()-t;
+     	timeTable[i] =((double)t)/CLOCKS_PER_SEC;
+		i++;
+     	printf("This transfer took - %lf seconds.\n", timeTable[i-1]);
       
     	printf("A new client connection accepted\n");
+    	
   
     	//Reply to client
     	char message[] = "Welcome to our TCP-server\n";
@@ -163,9 +196,15 @@ int main()
 		else 
 		{
 		   printf("message was successfully sent. size= %d.\n", bytesSent);
+		   if(i==5){
+				for(int j=0; j<5; j++){
+					avg += timeTable[j];
+				}
+				avg = avg/5.0;
+				printf("avg is: %lf.\n", avg);
+			}
 		}
-
-    }
+	}
   
     // TODO: All open clientSocket descriptors should be kept
     // in some container and closed as well.
