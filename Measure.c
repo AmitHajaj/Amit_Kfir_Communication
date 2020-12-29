@@ -119,12 +119,9 @@ int main()
 
         //Get all packets for this message.
         while(bytesCnt < SIZE){
-			printf("a");
             memset(buffer, 0, CHUNK_SIZE);
             bytesRecieved = recv(clientSocket, buffer, CHUNK_SIZE, 0);
-			printf("b\n");
             bytesCnt += bytesRecieved;
-			printf("bc: %d\n", bytesCnt);
         }
 
      	//error in messege receiving
@@ -153,7 +150,7 @@ int main()
      	receiving_t =clock()-receiving_t;
      	timeTable[i%5] =(double)receiving_t / CLOCKS_PER_SEC;
 		
-     	printf("This transfer took - %lf seconds.\n", timeTable[i]);
+     	printf("This transfer took - %lf seconds.\n", timeTable[i%5]);
       
     	printf("A new client connection accepted\n");
     	

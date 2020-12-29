@@ -36,14 +36,11 @@ double sendFile(int sock, int i, FILE *file){
 	send_t = clock();
 	ssize_t n;
 	int len = SIZE;
-	printf("Sending..\n");
 	int bytesSent = send(sock, file, CHUNK_SIZE, 0);
-	printf("send new one");
     while (bytesSent<SIZE)
     {
         n = send(sock, file+CHUNK_SIZE, CHUNK_SIZE, 0);
         if (n <= 0){
-            printf("[-]\n");
 			break;
 		}
 		bytesSent+= n;
@@ -130,7 +127,6 @@ FILE* loadFile(){
 	//to see if the file read fully.
 	fseek(fp, 0, 2);
 	size = ftell(fp);
-	printf("size is: %d", size);
 
 	return fp;
 }
@@ -171,13 +167,11 @@ int main()
 
 	//load file
 	FILE *file = loadFile();
-	printf("file loaded\n");
 
 	//send file 10 times
 	int ccType = 0;
 	for(int i=0; i<10; i++)
 	{
-		printf("%d\n", i);
 		sendFile(sock, i, file);
 		printf("file was sent %d times \n", i+1);
 	}
