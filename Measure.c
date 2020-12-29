@@ -22,154 +22,142 @@
 #endif
 
 #define SERVER_PORT 5060  //The port that the server listens
-#define SIZE 1024         //Size of the file.
+#define SIZE 1024*1024        //Size of the file.
+#define CHUNK_SIZE 256
   
+double timeTable [10] = {0};
+double avg=0;
+
 int main()
 {
-	int i=0;
-	double timeTable [5] = {0};
-	double avg=0;
-	
-	clock_t t;
-#if defined _WIN32
-    // Windows requires initialization
-    WSADATA wsa;
-    if (WSAStartup(MAKEWORD(2,2),&wsa) != 0)
-    {
-        printf("Failed. Error Code : %d",WSAGetLastError());
-        return 1;
-    }
-#else
-    signal(SIGPIPE, SIG_IGN); // on linux to prevent crash on closing socket
-#endif
+	//initialize and clean sockaddr_in that will hold the socket's address
+	struct sockaddr_in serverAddress;
+	struct sockaddr_in clientAddress;
+	clock_t receiving_t;
+
+	// on linux to prevent crash on closing socket
+	signal(SIGPIPE, SIG_IGN); 
       
-    // Open the listening (server) socket
-    int listeningSocket = -1;  
-	 
-    if((listeningSocket = socket(AF_INET , SOCK_STREAM , 0 )) == -1)
+    // Open the listening socket (server)
+    int listener = socket(AF_INET , SOCK_STREAM , 0 );  
+    if( listener == -1)
     {
-        printf("Could not create listening socket : %d" 
-#if defined _WIN32
-		,WSAGetLastError()
-#else
-		,errno
-#endif
-		);
-    }
+        printf("Could not create listening socket : %d" ,errno);
+    }else{
+		printf("Listening soucket was create successfully");
+	}
 
-	// Reuse the address if the server socket on was closed
-	// and remains for 45 seconds in TIME-WAIT state till the final removal.
-	//
-    int enableReuse = 1;
-    if (setsockopt(listeningSocket, SOL_SOCKET, SO_REUSEADDR, 
-#if defined _WIN32
-		(const char*)
-#endif
-		&enableReuse, 
-		
-		sizeof(int)) < 0)
-    {
-         printf("setsockopt() failed with error code : %d" , 
-#if defined _WIN32
-		WSAGetLastError()
-#else
-		errno
-#endif
-		);
-    }
+	//clean serverAddress that will hold the listening socket's address
+	memset(&serverAddress, 0, sizeof(serverAddress));
 
-    // "sockaddr_in" is the "derived" from sockaddr structure
-    // used for IPv4 communication. For IPv6, use sockaddr_in6
-    //
-    struct sockaddr_in serverAddress;
-    memset(&serverAddress, 0, sizeof(serverAddress));
-
+	//set sockaddr_in structure
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_addr.s_addr = INADDR_ANY;
     serverAddress.sin_port = htons(SERVER_PORT);  //network order
-      
-    // Bind the socket to the port with any IP at this port
-    if (bind(listeningSocket, (struct sockaddr *)&serverAddress , sizeof(serverAddress)) == -1)
+
+	// allow reuse of socket if was already in use
+    int yes = 1;
+    if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0)
     {
-        printf("Bind failed with error code : %d" , 
-#if defined _WIN32
-	WSAGetLastError()
-#else
-	errno
-#endif
-	);
-	// TODO: close the socket
-        return -1;
+         printf("setsockopt() failed with error code : %d" ,errno);
     }
-      
-    printf("Bind() success\n");
-  
-    // Make the socket listening; actually mother of all client sockets.
-    if (listen(listeningSocket, 500) == -1) //500 is a Maximum size of queue connection requests
-											//number of concurrent connections 
+
+    // Bind the socket to the port with any IP at this port and check it
+    if (bind(listener, (struct sockaddr *)&serverAddress , sizeof(serverAddress)) == -1)
     {
-	printf("listen() failed with error code : %d"
-#if defined _WIN32
-	,WSAGetLastError()
-#else
-	,errno
-#endif
-	);
-	// TODO: close the socket
+        printf("Bind failed with error code : %d" , errno);
+		// TODO: close the socket
+        return -1;
+    }else{
+		printf("Bind() success\n");
+	}
+
+	//TODO maybe change 500 to 10?
+    //create a connection requests queue from clients in size of 500
+    if (listen(listener, 500) == -1)
+    {
+		printf("listen() failed with error code : %d", errno);
+		// TODO: close the socket
         return -1;
     }
       
     //Accept and incoming connection
     printf("Waiting for incoming TCP-connections...\n");
       
-    struct sockaddr_in clientAddress;  //
     socklen_t clientAddressLen = sizeof(clientAddress);
 
-    while (1)
+	int i = 0;
+	int bytesCnt;
+	char buffer[CHUNK_SIZE];
+	//TODO maybe while(1)?
+    while (i<10)
     {
-    	memset(&clientAddress, 0, sizeof(clientAddress));
+		//TODO change to reno
+		
+		bytesCnt = 0;
+		//accept first request from requests queue
         clientAddressLen = sizeof(clientAddress);
-        int clientSocket = accept(listeningSocket, (struct sockaddr *)&clientAddress, &clientAddressLen);
+        int clientSocket = accept(listener, (struct sockaddr *)&clientAddress, &clientAddressLen);
+		
     	if (clientSocket == -1)
     	{
-           printf("listen failed with error code : %d"
-#if defined _WIN32
-		,WSAGetLastError()
-#else
-		,errno
-#endif
-			);
-	   // TODO: close the sockets
+           printf("listen failed with error code : %d", errno);
+		   // TODO: close the sockets
            return -1;
-    	}
+    	}else{
+			printf("The connection was successful\n");
+		}
 
-    	t = clock();
-    	char buffer[SIZE];
-     	int bytesRecieved = recv(clientSocket, buffer, SIZE, 0);
-     	if(bytesRecieved == -1){
+		//TODO maybe change buf to pointer?
+        //TODO maybe clean buffer
+		//receiving file from sender and check it
+    	
+		memset(buffer, 0, CHUNK_SIZE);
+     	int bytesRecieved = recv(clientSocket, buffer, CHUNK_SIZE, 0);
+		bytesCnt += bytesRecieved;
+
+        //Get all packets for this message.
+        while(bytesCnt < SIZE){
+			printf("a");
+            memset(buffer, 0, CHUNK_SIZE);
+            bytesRecieved = recv(clientSocket, buffer, CHUNK_SIZE, 0);
+			printf("b\n");
+            bytesCnt += bytesRecieved;
+			printf("bc: %d\n", bytesCnt);
+        }
+
+     	//error in messege receiving
+		if(bytesRecieved == -1){
     		printf("error has occurred.\n");
     		return(0);
      	}
+
+		//the message is empty
     	else if(bytesRecieved == 0){
-		printf("socket closed.\n");
+			printf("socket closed.\n");
      	}
-     	else if (bytesRecieved < SIZE)
+
+		//the message was too short
+     	// else if (bytesRecieved < SIZE)
+     	// {
+		// 	printf("recieved only %d bytes from the required %d.\n", bytesRecieved, SIZE);
+     	// }
+
+		//message is valid
+     	else if(bytesCnt == SIZE)
      	{
-		printf("recieved only %d bytes from the required %d.\n", bytesRecieved, SIZE);
-     	}
-     	else 
-     	{
-		printf("message was successfully recieved. size = %d.\n", bytesRecieved);
+			printf("message was successfully recieved. size = %d.\n", bytesRecieved);
      	}
     
-     	t=clock()-t;
-     	timeTable[i] =((double)t)/CLOCKS_PER_SEC;
-		i++;
-     	printf("This transfer took - %lf seconds.\n", timeTable[i-1]);
+     	receiving_t =clock()-receiving_t;
+     	timeTable[i] =(double)receiving_t / CLOCKS_PER_SEC;
+		
+     	printf("This transfer took - %lf seconds.\n", timeTable[i]);
       
     	printf("A new client connection accepted\n");
     	
-  
+		//TODO change message
+
     	//Reply to client
     	char message[] = "Welcome to our TCP-server\n";
         int messageLen = strlen(message) + 1;
@@ -177,13 +165,7 @@ int main()
     	int bytesSent = send(clientSocket, message, messageLen, 0);
 		if (-1 == bytesSent)
 		{
-			printf("send() failed with error code : %d" 
-#if defined _WIN32
-			,WSAGetLastError()
-#else
-			,errno
-#endif
-			);
+			printf("send() failed with error code : %d", errno);
 		}
 		else if (0 == bytesSent)
 		{
@@ -196,7 +178,7 @@ int main()
 		else 
 		{
 		   printf("message was successfully sent. size= %d.\n", bytesSent);
-		   if(i==5){
+		   if(i==9){
 				for(int j=0; j<5; j++){
 					avg += timeTable[j];
 				}
@@ -204,16 +186,12 @@ int main()
 				printf("avg is: %lf.\n", avg);
 			}
 		}
+		close(clientSocket);
+
+		i++;
 	}
-  
-    // TODO: All open clientSocket descriptors should be kept
-    // in some container and closed as well.
-#if defined _WIN32
-    closesocket(listeningSocket);
-    WSACleanup();
-#else
-    close(listeningSocket);
-#endif
-      
+
+    //TODO maybe close all clientSockets
+	close(listener);
     return 0;
 }
