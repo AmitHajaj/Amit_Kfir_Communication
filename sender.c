@@ -17,8 +17,9 @@
 #define SERVER_PORT 5060
 //#define SERVER_IP_ADDRESS "172.17.17.23"
 #define SERVER_IP_ADDRESS "127.0.0.1"
-#define SIZE 1024*1024
+#define SIZE (1024*1024)-1
 #define BUF_SIZE 27
+#define CHUNK_SIZE 256
 
 double timeTable [5] = {0};
 clock_t send_t;
@@ -30,8 +31,27 @@ double sendFile(int sock, int i, FILE *file){
 	//TODO when i==5 => change CC to reno
 
 	//get clock's current time and send file annnd then check how many bytes was sent
+
+
 	send_t = clock();
-	int bytesSent = send(sock, file, SIZE, 0);
+	ssize_t n;
+	int len = SIZE;
+	printf("Sending..\n");
+	int bytesSent = send(sock, file, CHUNK_SIZE, 0);
+	printf("send new one");
+    while (bytesSent<SIZE)
+    {
+        n = send(sock, file+CHUNK_SIZE, CHUNK_SIZE, 0);
+        if (n <= 0){
+            printf("[-]\n");
+			break;
+		}
+		bytesSent+= n;
+        
+        // len -= n;
+    }
+
+	// int bytesSent = send(sock, file, SIZE, 0);
 	printf("send()\n");
 	printf("%d\n", bytesSent);
 
@@ -99,6 +119,7 @@ FILE* loadFile(){
 	// load 1gb.txt to code
 	FILE *fp;
 	char *filename = "1gb.txt";
+	int size=0;
 
 	//open 1gb.txt for reading
 	fp = fopen(filename, "r");
@@ -106,6 +127,10 @@ FILE* loadFile(){
 		perror("error in read.");
 		exit(1);
 	}
+	//to see if the file read fully.
+	fseek(fp, 0, 2);
+	size = ftell(fp);
+	printf("size is: %d", size);
 
 	return fp;
 }
@@ -152,6 +177,7 @@ int main()
 	int ccType = 0;
 	for(int i=0; i<10; i++)
 	{
+		printf("%d\n", i);
 		sendFile(sock, i, file);
 		printf("file was sent %d times \n", i+1);
 	}

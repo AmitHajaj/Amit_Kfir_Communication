@@ -89,6 +89,8 @@ int main()
 	int i = 0;
 	int bytesCnt;
 	char buffer[CHUNK_SIZE];
+	clientAddressLen = sizeof(clientAddress);
+    int clientSocket = accept(listener, (struct sockaddr *)&clientAddress, &clientAddressLen);
 	//TODO maybe while(1)?
     while (i<10)
     {
@@ -96,8 +98,7 @@ int main()
 		
 		bytesCnt = 0;
 		//accept first request from requests queue
-        clientAddressLen = sizeof(clientAddress);
-        int clientSocket = accept(listener, (struct sockaddr *)&clientAddress, &clientAddressLen);
+
 		
     	if (clientSocket == -1)
     	{
@@ -146,11 +147,11 @@ int main()
 		//message is valid
      	else if(bytesCnt == SIZE)
      	{
-			printf("message was successfully recieved. size = %d.\n", bytesRecieved);
+			printf("message was successfully recieved. size = %d.\n", bytesCnt);
      	}
     
      	receiving_t =clock()-receiving_t;
-     	timeTable[i] =(double)receiving_t / CLOCKS_PER_SEC;
+     	timeTable[i%5] =(double)receiving_t / CLOCKS_PER_SEC;
 		
      	printf("This transfer took - %lf seconds.\n", timeTable[i]);
       
@@ -178,20 +179,21 @@ int main()
 		else 
 		{
 		   printf("message was successfully sent. size= %d.\n", bytesSent);
-		   if(i==9){
+		   if(i==9 || i==4){
 				for(int j=0; j<5; j++){
 					avg += timeTable[j];
 				}
 				avg = avg/5.0;
 				printf("avg is: %lf.\n", avg);
 			}
+			
 		}
-		close(clientSocket);
 
 		i++;
 	}
 
     //TODO maybe close all clientSockets
+	close(clientSocket);
 	close(listener);
     return 0;
 }
