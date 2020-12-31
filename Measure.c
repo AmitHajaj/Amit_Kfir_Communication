@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -94,7 +95,34 @@ int main()
 	//TODO maybe while(1)?
     while (i<10)
     {
-		//TODO change to reno
+		//changes the TCP_CONGESTION algorithm to reno.
+		if(i==5){
+			char buf[256];
+			socklen_t len;
+
+			len = sizeof(buf); 
+			if (getsockopt(listener, IPPROTO_TCP, TCP_CONGESTION, buf, &len) != 0) { 
+				perror("getsockopt");
+				return -1;
+			} 
+
+			printf("Current: %s\n", buf); 
+
+
+
+			strcpy(buf, "reno"); 
+			len = strlen(buf);
+			if (setsockopt(listener, IPPROTO_TCP, TCP_CONGESTION, buf, len) != 0) {
+				perror("setsockopt"); 
+				return -1;
+			}
+			len = sizeof(buf); 
+			if (getsockopt(listener, IPPROTO_TCP, TCP_CONGESTION, buf, &len) != 0) {
+				perror("getsockopt"); 
+				return -1; 
+			} 
+			printf("New: %s\n", buf); 
+		}
 		
 		bytesCnt = 0;
 		//accept first request from requests queue
@@ -183,9 +211,7 @@ int main()
 				avg = avg/5.0;
 				printf("avg is: %lf.\n", avg);
 			}
-			
 		}
-
 		i++;
 	}
 
