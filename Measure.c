@@ -25,16 +25,16 @@
 #define SERVER_PORT 5060  //The port that the server listens
 #define SIZE 1024*1024        //Size of the file.
 #define CHUNK_SIZE 256
-  
-double timeTable [10] = {0};
-double avg=0;
 
 int main()
 {
+	double timeTable [10] = {0};
+	double avg=0;
 	//initialize and clean sockaddr_in that will hold the socket's address
 	struct sockaddr_in serverAddress;
 	struct sockaddr_in clientAddress;
-	clock_t receiving_t;
+	// clock_t start_t, end_t, total_t;
+	time_t start_t, end_t, total_t;
 
 	// on linux to prevent crash on closing socket
 	signal(SIGPIPE, SIG_IGN); 
@@ -141,6 +141,8 @@ int main()
         //TODO maybe clean buffer
 		//receiving file from sender and check it
     	
+		start_t= time(NULL);
+		printf("start time: %ld\n", start_t);
 		memset(buffer, 0, CHUNK_SIZE);
      	int bytesRecieved = recv(clientSocket, buffer, CHUNK_SIZE, 0);
 		bytesCnt += bytesRecieved;
@@ -175,10 +177,12 @@ int main()
 			printf("message was successfully recieved. size = %d.\n", bytesCnt);
      	}
     
-     	receiving_t =clock()-receiving_t;
-     	timeTable[i%5] =(double)receiving_t / CLOCKS_PER_SEC;
+     	end_t = time(NULL);
+		printf("end time: %ld\n", end_t);
+		total_t =(end_t-start_t); 
+     	timeTable[i%5] = total_t;
 		
-     	printf("This transfer took - %lf seconds.\n", timeTable[i%5]);
+     	printf("This transfer took - %ld seconds.\n", total_t);
       
     	printf("A new client connection accepted\n");
     	
@@ -209,7 +213,7 @@ int main()
 					avg += timeTable[j];
 				}
 				avg = avg/5.0;
-				printf("avg is: %lf.\n", avg);
+				printf("----------avg is: %lf.----------\n", avg);
 			}
 		}
 		i++;
